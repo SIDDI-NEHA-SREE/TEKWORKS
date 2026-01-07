@@ -12,12 +12,13 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 st.set_page_config(page_title="Telco Churn - Logistic Regression", layout="centered")
 
 # Load CSS
+import os
+
 def load_css(file):
-    with open(file) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
+    if os.path.exists(file):
+        with open(file) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 load_css("style.css")
-
 # Title
 st.markdown("""
 <div class="card">
@@ -136,3 +137,4 @@ else:
     st.success("✅ Customer is Likely to STAY")
 
 st.markdown('</div>', unsafe_allow_html=True)
+
