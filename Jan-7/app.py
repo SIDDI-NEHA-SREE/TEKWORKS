@@ -1,162 +1,91 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix
 
-# --------------------------------------------------
-# Page Config
-# --------------------------------------------------
-st.set_page_config(page_title="Telco Churn - Logistic Regression", layout="centered")
+# ------------------ PAGE CONFIG ------------------
+st.set_page_config(page_title="Telco Churn Prediction", layout="wide")
 
-# --------------------------------------------------
-# Load CSS safely
-# --------------------------------------------------
-def load_css(file):
-    if os.path.exists(file):
-        with open(file) as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# ------------------ LOAD CSS ------------------
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css("style.css")
 
-# --------------------------------------------------
-# Title Card
-# --------------------------------------------------
-st.markdown("""
-<div class="card">
-    <h1>Logistic Regression</h1>
-    <p>Predict <b>Customer Churn</b> using Telco Customer Data</p>
-</div>
-""", unsafe_allow_html=True)
+# ------------------ TITLE ------------------
+st.markdown("<h1 class='title'>Telco Customer Churn Analysis</h1>", unsafe_allow_html=True)
 
-# --------------------------------------------------
-# Load Dataset (Cloud-safe)
-# --------------------------------------------------
+# ------------------ LOAD DATA ------------------
 @st.cache_data
 def load_data():
-    file_path = "Telco-Customer-Churn.csv"
-    if not os.path.exists(file_path):
-        st.error("Dataset not found. Please upload Telco-Customer-Churn.csv")
-        st.stop()
-
-    df = pd.read_csv(file_path)
-    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-    df.dropna(inplace=True)
-    return df
+    return pd.read_csv("Telco-Customer-Churn.csv")
 
 df = load_data()
 
-# --------------------------------------------------
-# Dataset Preview
-# --------------------------------------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("Dataset Preview")
-st.dataframe(df.head())
-st.markdown('</div>', unsafe_allow_html=True)
+# ------------------ DATA PREPROCESSING ------------------
+df = df.drop("customerID", axis=1)
 
-# --------------------------------------------------
-# Encode Categorical Features
-# --------------------------------------------------
-le = LabelEncoder()
-for col in df.select_dtypes(include="object").columns:
-    df[col] = le.fit_transform(df[col])
+df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+df = df.dropna()
 
-# --------------------------------------------------
-# Features & Target
-# --------------------------------------------------
+df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
+
+df = pd.get_dummies(df, drop_first=True)
+
 X = df.drop("Churn", axis=1)
 y = df["Churn"]
 
-# --------------------------------------------------
-# Train-Test Split
-# --------------------------------------------------
+# ------------------ TRAIN TEST SPLIT ------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# --------------------------------------------------
-# Scaling
-# --------------------------------------------------
+# ------------------ SCALING ------------------
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# --------------------------------------------------
-# Train Logistic Regression Model
-# --------------------------------------------------
+# ------------------ MODEL ------------------
 model = LogisticRegression(max_iter=1000)
-model.fit(X_train_scaled, y_train)
+model.fit(X_train, y_train)
 
-# --------------------------------------------------
-# Predictions & Metrics
-# --------------------------------------------------
-y_pred = model.predict(X_test_scaled)
+# ------------------ PREDICTION ------------------
+y_pred = model.predict(X_test)
+
 accuracy = accuracy_score(y_test, y_pred)
 cm = confusion_matrix(y_test, y_pred)
 
-# --------------------------------------------------
-# Churn Distribution Visualization
-# --------------------------------------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("Churn Distribution")
+# ------------------ RESULTS ------------------
+st.markdown("## Model Performance")
 
-fig1, ax1 = plt.subplots()
-sns.countplot(x=y, ax=ax1)
-ax1.set_xlabel("Churn (0 = Stay, 1 = Leave)")
-ax1.set_ylabel("Count")
-st.pyplot(fig1)
-st.markdown('</div>', unsafe_allow_html=True)
+st.metric(label="Accuracy", value=f"{accuracy * 100:.2f}%")
 
-# --------------------------------------------------
-# Confusion Matrix
-# --------------------------------------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("Confusion Matrix")
+stay_count = (y == 0).sum()
+leave_count = (y == 1).sum()
 
-fig2, ax2 = plt.subplots()
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax2)
-ax2.set_xlabel("Predicted")
-ax2.set_ylabel("Actual")
-st.pyplot(fig2)
-st.markdown('</div>', unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-# --------------------------------------------------
-# Performance Metrics
-# --------------------------------------------------
-st.subheader("Model Performance")
+with col1:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Customers Staying")
+    st.write(stay_count)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Accuracy", f"{accuracy*100:.2f}%")
-c2.metric("Correct Churn Identified", cm[1, 1])
-c3.metric("Non-Churn Misclassified", cm[0, 1])
+with col2:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Customers Leaving")
+    st.write(leave_count)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# --------------------------------------------------
-# Prediction Section
-# --------------------------------------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("Predict Customer Churn")
-
-tenure = st.slider("Tenure (Months)", 0, 72, 12)
-monthly = st.slider("Monthly Charges", 0.0, 200.0, 70.0)
-total = st.slider("Total Charges", 0.0, 10000.0, 1000.0)
-
-sample = np.zeros(X.shape[1])
-sample[X.columns.get_loc("tenure")] = tenure
-sample[X.columns.get_loc("MonthlyCharges")] = monthly
-sample[X.columns.get_loc("TotalCharges")] = total
-
-sample_scaled = scaler.transform(sample.reshape(1, -1))
-prediction = model.predict(sample_scaled)[0]
-
-if prediction == 1:
-    st.error("⚠️ Customer is Likely to LEAVE")
-else:
-    st.success("✅ Customer is Likely to STAY")
-
-st.markdown('</div>', unsafe_allow_html=True)
+# ------------------ CONFUSION MATRIX ------------------
+st.markdown("## Confusion Matrix")
+st.write(pd.DataFrame(
+    cm,
+    columns=["Predicted Stay", "Predicted Leave"],
+    index=["Actual Stay", "Actual Leave"]
+))
