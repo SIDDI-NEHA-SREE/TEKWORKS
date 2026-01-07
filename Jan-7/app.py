@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 st.set_page_config(page_title="Telco Churn Predictor", layout="centered")
 
 # Load CSS
-with open("style.css") as f:
+with open("styles.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Load data
@@ -74,3 +74,4 @@ if st.button("Predict"):
         st.error("⚠️ Customer is likely to LEAVE")
     else:
         st.success("✅ Customer is likely to STAY")
+
