@@ -30,7 +30,13 @@ st.markdown("""
 # Load Data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("Telco-Customer-Churn.csv")
+    file_path = "Telco-Customer-Churn.csv"
+
+    if not os.path.exists(file_path):
+        st.error("Dataset file not found. Please check GitHub repository.")
+        st.stop()
+
+    df = pd.read_csv(file_path)
     df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
     df.dropna(inplace=True)
     return df
@@ -137,4 +143,5 @@ else:
     st.success("✅ Customer is Likely to STAY")
 
 st.markdown('</div>', unsafe_allow_html=True)
+
 
