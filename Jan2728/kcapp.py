@@ -13,6 +13,9 @@ st.write("This system uses a **Stacking Ensemble Machine Learning model** to pre
 
 st.sidebar.header("🏠 Enter House Details")
 
+# ------------------------------
+# Sidebar Input (only up to 'grade')
+# ------------------------------
 def user_input_features():
     bedrooms = st.sidebar.number_input("Bedrooms", 0, 10, 3)
     bathrooms = st.sidebar.number_input("Bathrooms", 0.0, 10.0, 2.0)
@@ -23,13 +26,6 @@ def user_input_features():
     view = st.sidebar.slider("View (0-4)", 0, 4, 0)
     condition = st.sidebar.slider("Condition (1-5)", 1, 5, 3)
     grade = st.sidebar.slider("Grade (1-13)", 1, 13, 7)
-    sqft_above = st.sidebar.number_input("Sqft Above", 300, 8000, 1000)
-    sqft_basement = st.sidebar.number_input("Sqft Basement", 0, 3000, 500)
-    zipcode = st.sidebar.number_input("Zipcode", 10000, 99999, 98103)
-    lat = st.sidebar.number_input("Latitude", value=47.6)
-    long = st.sidebar.number_input("Longitude", value=-122.3)
-    sqft_living15 = st.sidebar.number_input("Living 15 Nearby (sqft)", 300, 10000, 1500)
-    sqft_lot15 = st.sidebar.number_input("Lot 15 Nearby (sqft)", 300, 50000, 5000)
 
     data = {
         'bedrooms': bedrooms,
@@ -40,19 +36,15 @@ def user_input_features():
         'waterfront': waterfront,
         'view': view,
         'condition': condition,
-        'grade': grade,
-        'sqft_above': sqft_above,
-        'sqft_basement': sqft_basement,
-        'zipcode': zipcode,
-        'lat': lat,
-        'long': long,
-        'sqft_living15': sqft_living15,
-        'sqft_lot15': sqft_lot15
+        'grade': grade
     }
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input_features()
 
+# ------------------------------
+# Model Architecture Info
+# ------------------------------
 st.subheader("🧩 Stacking Model Architecture")
 st.info("""
 **Base Models:**
@@ -64,29 +56,49 @@ st.info("""
 - Linear Regression
 """)
 
+# ------------------------------
+# Load Data
+# ------------------------------
 data = pd.read_csv("kc_house_data.csv")
 
-# Drop date and id columns
+# Drop irrelevant columns
 columns_to_drop = ['id', 'date', 'yr_built', 'yr_renovated']
 for col in columns_to_drop:
     if col in data.columns:
         data = data.drop(col, axis=1)
 
-X = data.drop(['price'], axis=1)
+# ------------------------------
+# Only keep features up to 'grade'
+# ------------------------------
+features_to_use = [
+    'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot',
+    'floors', 'waterfront', 'view', 'condition', 'grade'
+]
+
+X = data[features_to_use]
 y = data['price']
 
+# ------------------------------
+# Ensure numeric and clean
+# ------------------------------
 X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
 input_df = input_df.apply(pd.to_numeric, errors='coerce').fillna(0)
 
-# Ensure input_df has the same columns as X
-input_df = input_df[X.columns]
-
+# ------------------------------
+# Scaling
+# ------------------------------
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 input_scaled = scaler.transform(input_df)
 
+# ------------------------------
+# Train-Test Split
+# ------------------------------
 X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
+# ------------------------------
+# Base Models
+# ------------------------------
 lr = LinearRegression()
 dt = DecisionTreeRegressor(random_state=42)
 rf = RandomForestRegressor(random_state=42, n_estimators=100)
@@ -98,7 +110,11 @@ stacking_model = StackingRegressor(
 
 stacking_model.fit(X_train, y_train)
 
+# ------------------------------
+# Predict Button
+# ------------------------------
 if st.button("🔘 Predict Price (Stacking Model)"):
+    # Fit base models on full training set for demonstration
     lr_pred = lr.fit(X_train, y_train).predict(input_scaled)[0]
     dt_pred = dt.fit(X_train, y_train).predict(input_scaled)[0]
     rf_pred = rf.fit(X_train, y_train).predict(input_scaled)[0]
@@ -115,6 +131,9 @@ if st.button("🔘 Predict Price (Stacking Model)"):
     st.subheader("🧠 Final Stacking Decision")
     st.write(f"Predicted Price → ${final_pred:,.2f}")
 
+# ------------------------------
+# Business Explanation
+# ------------------------------
 st.subheader("💡 Business Explanation")
 st.info(
     "Based on the house features and combined predictions from multiple models, "
