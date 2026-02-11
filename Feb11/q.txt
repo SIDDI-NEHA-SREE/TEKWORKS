@@ -1,0 +1,104 @@
+🟣 “News Topic Discovery Dashboard” Using Hierarchical Clustering
+1️⃣ App Title & Description
+Title:
+🟣 “News Topic Discovery Dashboard”
+Short Description:
+“This system uses Hierarchical Clustering to automatically group similar news articles based on textual similarity.”
+Purpose (implicit for students):
+👉 Discover hidden themes without defining categories upfront.
+2️⃣ Input Section (Sidebar – Mandatory)
+The sidebar should allow users to control how hierarchical clustering is performed.
+📂 Dataset Handling
+Upload CSV file (or pre-load Kaggle dataset)
+Automatically detect:
+Text column (e.g., news, text, headline)
+📝 Text Vectorization Controls
+User should select:
+• Maximum TF-IDF Features
+Slider (100 to 2000)
+Default: 1000
+• Stop Words Removal
+Checkbox (Use English stopwords)
+• N-gram Range (Optional Bonus)
+Dropdown:
+Unigrams
+Bigrams
+Unigrams + Bigrams
+🌳 Hierarchical Clustering Controls
+• Linkage Method
+Dropdown:
+Ward
+Complete
+Average
+Single
+• Distance Metric
+Dropdown:
+Euclidean
+• Number of Articles for Dendrogram
+Slider (20 – 200)
+
+(Important: Dendrogram for subset only)
+3️⃣ Clustering Control (Important)
+Add a button:
+🟦 “Generate Dendrogram”
+This ensures students understand:
+Hierarchical clustering builds a tree first
+We decide cluster count after inspecting tree
+After dendrogram inspection:
+🟩 “Apply Clustering”
+User selects:
+
+• Number of Clusters (based on dendrogram)
+4️⃣ Dendrogram Section (Main Panel – Core Part)
+Display:
+Dendrogram visualization
+Y-axis: Distance
+X-axis: Article index
+Students must visually inspect:
+Large vertical gaps
+Natural separation levels
+Optional:
+Allow drawing horizontal cut line (slider for height)
+5️⃣ Clustering Visualization Section
+Since text is high dimensional:
+Project clusters using:
+• PCA (2D reduction)
+Display:
+2D scatter plot
+Points colored by cluster
+Hover shows sample article snippet
+This updates dynamically when:
+Linkage changes
+Number of clusters changes
+6️⃣ Cluster Summary Section (Business View)
+Display a table:
+Cluster ID	Number of Articles	Top Keywords
+For each cluster:
+Extract top 10 TF-IDF terms
+Show most representative article snippet
+This helps editors understand:
+What topic each cluster represents
+7️⃣ Validation Section 
+Since no labels exist, display:
+📊 Silhouette Score
+Show:
+Numeric value
+Short explanation:
+Close to 1 → well-separated clusters
+Close to 0 → overlapping clusters
+Negative → poor clustering
+Add optional:
+Silhouette score comparison for different linkage methods
+8️⃣ Business Interpretation Section (Human Language Only)
+Below results, display insights like:
+🟣 Cluster 0: Articles related to financial markets and stock performance
+
+🟡 Cluster 1: Corporate earnings and quarterly results
+
+🔵 Cluster 2: Economic policy and government announcements
+Language must:
+Avoid ML terminology
+Focus on editorial usefulness
+9️⃣ User Guidance / Insight Box
+Display:
+“Articles grouped in the same cluster share similar vocabulary and themes. These clusters can be used for automatic tagging, recommendations, and content organization.”
