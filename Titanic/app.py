@@ -1,207 +1,174 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import joblib
-import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
-# -----------------------------
-# Streamlit Config
-# -----------------------------
 st.set_page_config(
-    page_title="Titanic Survival Predictor",
+    page_title="Titanic Survival Prediction",
     page_icon="🚢",
     layout="wide"
 )
 
-# -----------------------------
-# Base directory (works locally + Streamlit Cloud)
-# -----------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+@st.cache_resource
+def train_model():
 
-# -----------------------------
-# Load scaler safely
-# -----------------------------
-try:
-    scaler = joblib.load(
-        os.path.join(BASE_DIR, "scaler.pkl")
-    )
-except Exception as e:
-    st.error(f"Scaler loading failed: {e}")
-    st.stop()
+    url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
 
-# -----------------------------
-# Load dataset safely
-# -----------------------------
-try:
-    data = pd.read_csv(
-        os.path.join(BASE_DIR, "Titanic-Dataset.csv")
-    )
-except Exception as e:
-    st.error(f"Dataset loading failed: {e}")
-    st.stop()
+    df = pd.read_csv(url)
 
+    df = df[['Pclass','Sex','Age','SibSp','Parch','Fare','Embarked','Survived']]
 
-# -----------------------------
-# Manual ANN weights
-# Keep YOUR original weights here
-# -----------------------------
+    df['Age'] = df['Age'].fillna(df['Age'].median())
+    df['Fare'] = df['Fare'].fillna(df['Fare'].median())
+    df['Embarked'] = df['Embarked'].fillna(df['Embarked'].mode()[0])
 
-w_input_hidden = np.array([
-    # paste your weights exactly
-])
+    df['Sex'] = df['Sex'].map({
+        'male':0,
+        'female':1
+    })
 
-b_hidden = np.array([
-    # paste hidden bias
-])
+    df['Embarked'] = df['Embarked'].map({
+        'S':0,
+        'C':1,
+        'Q':2
+    })
 
-w_hidden_output = np.array([
-    # paste output weights
-])
+    X = df.drop('Survived',axis=1)
+    y = df['Survived']
 
-b_output = np.array([
-    # paste output bias
-])
-
-
-# -----------------------------
-# Activation
-# -----------------------------
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
-# -----------------------------
-# Prediction
-# -----------------------------
-def predict_survival(features):
-
-    scaled = scaler.transform([features])
-
-    hidden = sigmoid(
-        np.dot(scaled, w_input_hidden) + b_hidden
+    X_train,X_test,y_train,y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42
     )
 
-    output = sigmoid(
-        np.dot(hidden, w_hidden_output) + b_output
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
     )
 
-    probability = output[0][0]
+    model.fit(X_train,y_train)
 
-    return probability
+    accuracy = model.score(X_test,y_test)
+
+    return model,accuracy
 
 
-# -----------------------------
-# UI
-# -----------------------------
+model,accuracy = train_model()
 
-st.title("🚢 Titanic Survival Predictor")
+st.title("🚢 Titanic Survival Prediction System")
 
-st.write(
-    "Predict whether a passenger would survive "
-    "the Titanic disaster."
+st.markdown(
+"""
+Predict whether a passenger would survive the Titanic disaster.
+"""
 )
 
-col1, col2 = st.columns(2)
+st.sidebar.header("Passenger Details")
 
-with col1:
+pclass = st.sidebar.selectbox(
+    "Passenger Class",
+    [1,2,3]
+)
 
-    pclass = st.selectbox(
-        "Passenger Class",
-        [1, 2, 3]
-    )
+sex = st.sidebar.selectbox(
+    "Gender",
+    ["Male","Female"]
+)
 
-    sex = st.selectbox(
-        "Sex",
-        ["Male", "Female"]
-    )
+age = st.sidebar.slider(
+    "Age",
+    0,
+    80,
+    25
+)
 
-    age = st.slider(
-        "Age",
-        0,
-        80,
-        25
-    )
+sibsp = st.sidebar.slider(
+    "Siblings / Spouses",
+    0,
+    8,
+    0
+)
 
-    sibsp = st.number_input(
-        "Siblings / Spouses",
-        0,
-        10,
-        0
-    )
+parch = st.sidebar.slider(
+    "Parents / Children",
+    0,
+    6,
+    0
+)
 
-with col2:
+fare = st.sidebar.slider(
+    "Fare",
+    0,
+    550,
+    50
+)
 
-    parch = st.number_input(
-        "Parents / Children",
-        0,
-        10,
-        0
-    )
+embarked = st.sidebar.selectbox(
+    "Embarked Port",
+    ["Southampton","Cherbourg","Queenstown"]
+)
 
-    fare = st.slider(
-        "Fare",
-        0.0,
-        600.0,
-        32.0
-    )
+sex_map = {
+    "Male":0,
+    "Female":1
+}
 
-    embarked = st.selectbox(
-        "Embarked",
-        ["S", "C", "Q"]
-    )
+embark_map = {
+    "Southampton":0,
+    "Cherbourg":1,
+    "Queenstown":2
+}
 
+features = pd.DataFrame(
+    [[
+        pclass,
+        sex_map[sex],
+        age,
+        sibsp,
+        parch,
+        fare,
+        embark_map[embarked]
+    ]],
+    columns=[
+        'Pclass',
+        'Sex',
+        'Age',
+        'SibSp',
+        'Parch',
+        'Fare',
+        'Embarked'
+    ]
+)
 
-# -----------------------------
-# Encoding
-# -----------------------------
+if st.button("Predict Survival"):
 
-sex = 1 if sex == "Male" else 0
+    prediction = model.predict(features)[0]
 
-embarked_s = 1 if embarked == "S" else 0
-embarked_c = 1 if embarked == "C" else 0
-embarked_q = 1 if embarked == "Q" else 0
+    probability = model.predict_proba(features)[0][1]
 
+    st.subheader("Prediction Result")
 
-features = [
-    pclass,
-    sex,
-    age,
-    sibsp,
-    parch,
-    fare,
-    embarked_c,
-    embarked_q,
-    embarked_s
-]
-
-
-# -----------------------------
-# Predict button
-# -----------------------------
-
-if st.button("Predict"):
-
-    prob = predict_survival(features)
-
-    if prob >= 0.5:
+    if prediction == 1:
 
         st.success(
-            f"Survived ✅ "
-            f"({prob*100:.2f}% confidence)"
+            f"Passenger likely SURVIVES ✅\n\nConfidence: {probability:.2%}"
         )
 
     else:
 
         st.error(
-            f"Did Not Survive ❌ "
-            f"({(1-prob)*100:.2f}% confidence)"
+            f"Passenger likely DOES NOT SURVIVE ❌\n\nConfidence: {(1-probability):.2%}"
         )
 
+st.divider()
 
-# -----------------------------
-# Dataset Preview
-# -----------------------------
+st.metric(
+    "Model Accuracy",
+    f"{accuracy:.2%}"
+)
 
-with st.expander("Dataset Preview"):
-
-    st.dataframe(data.head())
+st.caption(
+    "Built with Streamlit + Scikit-Learn"
+)
