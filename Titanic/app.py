@@ -1,120 +1,207 @@
 import streamlit as st
+import pandas as pd
 import numpy as np
 import joblib
-import matplotlib.pyplot as plt
+import os
 
+# -----------------------------
+# Streamlit Config
+# -----------------------------
 st.set_page_config(
-    page_title="Titanic Survival Prediction",
+    page_title="Titanic Survival Predictor",
+    page_icon="🚢",
     layout="wide"
 )
 
-scaler = joblib.load("scaler.pkl")
+# -----------------------------
+# Base directory (works locally + Streamlit Cloud)
+# -----------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Trained weights
+# -----------------------------
+# Load scaler safely
+# -----------------------------
+try:
+    scaler = joblib.load(
+        os.path.join(BASE_DIR, "scaler.pkl")
+    )
+except Exception as e:
+    st.error(f"Scaler loading failed: {e}")
+    st.stop()
+
+# -----------------------------
+# Load dataset safely
+# -----------------------------
+try:
+    data = pd.read_csv(
+        os.path.join(BASE_DIR, "Titanic-Dataset.csv")
+    )
+except Exception as e:
+    st.error(f"Dataset loading failed: {e}")
+    st.stop()
+
+
+# -----------------------------
+# Manual ANN weights
+# Keep YOUR original weights here
+# -----------------------------
+
 w_input_hidden = np.array([
-    [0.11,0.21],
-    [0.14,0.24],
-    [0.17,0.27]
+    # paste your weights exactly
 ])
 
-b_hidden = np.array([0.1,0.1])
+b_hidden = np.array([
+    # paste hidden bias
+])
 
 w_hidden_output = np.array([
-    [0.31],
-    [0.34]
+    # paste output weights
 ])
 
-b_output = 0.1
+b_output = np.array([
+    # paste output bias
+])
 
+
+# -----------------------------
+# Activation
+# -----------------------------
 def sigmoid(x):
-    return 1/(1+np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
-st.title("🚢 Titanic Survival Prediction System")
 
-st.subheader(
-    "Deep Learning Based Passenger Survival Prediction"
-)
+# -----------------------------
+# Prediction
+# -----------------------------
+def predict_survival(features):
+
+    scaled = scaler.transform([features])
+
+    hidden = sigmoid(
+        np.dot(scaled, w_input_hidden) + b_hidden
+    )
+
+    output = sigmoid(
+        np.dot(hidden, w_hidden_output) + b_output
+    )
+
+    probability = output[0][0]
+
+    return probability
+
+
+# -----------------------------
+# UI
+# -----------------------------
+
+st.title("🚢 Titanic Survival Predictor")
 
 st.write(
-"""
-Predict passenger survival using
-an Artificial Neural Network.
-"""
+    "Predict whether a passenger would survive "
+    "the Titanic disaster."
 )
 
-col1,col2,col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
+
     pclass = st.selectbox(
         "Passenger Class",
-        [1,2,3]
+        [1, 2, 3]
+    )
+
+    sex = st.selectbox(
+        "Sex",
+        ["Male", "Female"]
+    )
+
+    age = st.slider(
+        "Age",
+        0,
+        80,
+        25
+    )
+
+    sibsp = st.number_input(
+        "Siblings / Spouses",
+        0,
+        10,
+        0
     )
 
 with col2:
-    age = st.slider(
-        "Age",
-        1,
-        80,
-        24
+
+    parch = st.number_input(
+        "Parents / Children",
+        0,
+        10,
+        0
     )
 
-with col3:
-    fare = st.number_input(
+    fare = st.slider(
         "Fare",
         0.0,
         600.0,
-        120.0
+        32.0
     )
 
-if st.button("Predict Survival"):
-
-    X = scaler.transform(
-        [[pclass,age,fare]]
+    embarked = st.selectbox(
+        "Embarked",
+        ["S", "C", "Q"]
     )
 
-    hidden_net = (
-        np.dot(X,w_input_hidden)
-        + b_hidden
-    )
 
-    hidden = sigmoid(hidden_net)
+# -----------------------------
+# Encoding
+# -----------------------------
 
-    output_net = (
-        np.dot(
-            hidden,
-            w_hidden_output
+sex = 1 if sex == "Male" else 0
+
+embarked_s = 1 if embarked == "S" else 0
+embarked_c = 1 if embarked == "C" else 0
+embarked_q = 1 if embarked == "Q" else 0
+
+
+features = [
+    pclass,
+    sex,
+    age,
+    sibsp,
+    parch,
+    fare,
+    embarked_c,
+    embarked_q,
+    embarked_s
+]
+
+
+# -----------------------------
+# Predict button
+# -----------------------------
+
+if st.button("Predict"):
+
+    prob = predict_survival(features)
+
+    if prob >= 0.5:
+
+        st.success(
+            f"Survived ✅ "
+            f"({prob*100:.2f}% confidence)"
         )
-        + b_output
-    )
 
-    prediction = sigmoid(output_net)[0][0]
+    else:
 
-    result = (
-        "Survived"
-        if prediction>0.5
-        else "Not Survived"
-    )
+        st.error(
+            f"Did Not Survive ❌ "
+            f"({(1-prob)*100:.2f}% confidence)"
+        )
 
-    st.metric(
-        "Prediction",
-        result
-    )
 
-    st.metric(
-        "Survival Probability",
-        f"{prediction*100:.2f}%"
-    )
+# -----------------------------
+# Dataset Preview
+# -----------------------------
 
-    st.metric(
-        "Confidence",
-        f"{max(prediction,1-prediction)*100:.2f}%"
-    )
+with st.expander("Dataset Preview"):
 
-    fig,ax=plt.subplots()
-
-    ax.bar(
-        ["No","Yes"],
-        [1-prediction,prediction]
-    )
-
-    st.pyplot(fig)
+    st.dataframe(data.head())
