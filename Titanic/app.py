@@ -1,57 +1,99 @@
 import streamlit as st
-import tensorflow as tf
 import numpy as np
+import joblib
 import matplotlib.pyplot as plt
 
-model = tf.keras.models.load_model("titanic_ann_model.h5")
+st.set_page_config(
+    page_title="Titanic Survival Prediction",
+    layout="wide"
+)
 
-st.set_page_config(page_title="Titanic Survival Prediction")
+scaler = joblib.load("scaler.pkl")
+
+# Trained weights
+w_input_hidden = np.array([
+    [0.11,0.21],
+    [0.14,0.24],
+    [0.17,0.27]
+])
+
+b_hidden = np.array([0.1,0.1])
+
+w_hidden_output = np.array([
+    [0.31],
+    [0.34]
+])
+
+b_output = 0.1
+
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
 
 st.title("🚢 Titanic Survival Prediction System")
-st.subheader("Deep Learning Based Passenger Survival Prediction")
 
-st.write("""
-This application predicts passenger survival
-using an Artificial Neural Network trained
-using TensorFlow.
-""")
+st.subheader(
+    "Deep Learning Based Passenger Survival Prediction"
+)
 
-col1,col2,col3=st.columns(3)
+st.write(
+"""
+Predict passenger survival using
+an Artificial Neural Network.
+"""
+)
+
+col1,col2,col3 = st.columns(3)
 
 with col1:
-    pclass=st.selectbox(
-        "Passenger Class",[1,2,3]
+    pclass = st.selectbox(
+        "Passenger Class",
+        [1,2,3]
     )
 
 with col2:
-    age=st.slider(
-        "Age",1,80,24
+    age = st.slider(
+        "Age",
+        1,
+        80,
+        24
     )
 
 with col3:
-    fare=st.number_input(
-        "Fare",0.0,600.0,120.0
+    fare = st.number_input(
+        "Fare",
+        0.0,
+        600.0,
+        120.0
     )
-
-def normalize(x,minv,maxv):
-    return (x-minv)/(maxv-minv)
 
 if st.button("Predict Survival"):
 
-    pclass_n=normalize(pclass,1,3)
-    age_n=normalize(age,0,80)
-    fare_n=normalize(fare,0,600)
+    X = scaler.transform(
+        [[pclass,age,fare]]
+    )
 
-    X=np.array([
-        [pclass_n,age_n,fare_n]
-    ])
+    hidden_net = (
+        np.dot(X,w_input_hidden)
+        + b_hidden
+    )
 
-    pred=model.predict(X)[0][0]
+    hidden = sigmoid(hidden_net)
 
-    survival=pred
-    nonsurvival=1-pred
+    output_net = (
+        np.dot(
+            hidden,
+            w_hidden_output
+        )
+        + b_output
+    )
 
-    result="Survived" if pred>0.5 else "Not Survived"
+    prediction = sigmoid(output_net)[0][0]
+
+    result = (
+        "Survived"
+        if prediction>0.5
+        else "Not Survived"
+    )
 
     st.metric(
         "Prediction",
@@ -59,20 +101,20 @@ if st.button("Predict Survival"):
     )
 
     st.metric(
-        "Probability",
-        f"{pred:.2%}"
+        "Survival Probability",
+        f"{prediction*100:.2f}%"
     )
 
     st.metric(
         "Confidence",
-        f"{max(pred,1-pred):.2%}"
+        f"{max(prediction,1-prediction)*100:.2f}%"
     )
 
     fig,ax=plt.subplots()
 
     ax.bar(
         ["No","Yes"],
-        [nonsurvival,survival]
+        [1-prediction,prediction]
     )
 
     st.pyplot(fig)
