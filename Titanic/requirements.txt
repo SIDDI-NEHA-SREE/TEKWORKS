@@ -5,3 +5,4 @@ pandas
 matplotlib
 joblib
 scikit-learn
+h5py
