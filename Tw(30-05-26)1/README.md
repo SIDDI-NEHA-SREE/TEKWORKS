@@ -1,4 +1,6 @@
 Deep Learning :30-05-2026
+#without aws
+
 🚀 DEEP LEARNING ASSIGNMENT 1
 AI-Powered Customer Churn Prediction Platform
 Topic
