@@ -96,6 +96,8 @@ if st.button("🔮 Run Risk Profile Analytics"):
         st.error(f"⚠️ **High Churn Vulnerability Asset!** Churn Probability: {prediction*100:.2f}%")
     else:
         st.success(f"✅ **Stable Customer Retention Status.** Churn Probability: {prediction*100:.2f}%")
+
+'''
 import numpy as np
 import pandas as pd
 import tensorflow as tf
