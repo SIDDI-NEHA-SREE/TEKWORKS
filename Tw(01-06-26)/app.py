@@ -16,15 +16,23 @@ st.write("---")
 # In production, save/load your actual tokenizer object via pickle
 @st.cache_resource
 def load_models_and_assets():
-    # Attempting to load pre-saved native H5 tracking formats
+    # 1. Get the directory where app.py actually lives
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 2. Join the directory path with your model filenames
+    simplernn_path = os.path.join(current_dir, 'simplernn_model.h5')
+    lstm_path = os.path.join(current_dir, 'lstm_model.h5')
+    gru_path = os.path.join(current_dir, 'gru_model.h5')
+    
     try:
-        simplernn = tf.keras.models.load_model('simplernn_model.h5')
-        lstm = tf.keras.models.load_model('lstm_model.h5')
-        gru = tf.keras.models.load_model('gru_model.h5')
-    except:
-        # Fallback initialization stub if models are missing
-        st.error("Pre-trained model files (.h5) not found! Run training pipeline first.")
+        # 3. Load using the absolute paths
+        simplernn = tf.keras.models.load_model(simplernn_path)
+        lstm = tf.keras.models.load_model(lstm_path)
+        gru = tf.keras.models.load_model(gru_path)
+    except Exception as e:
+        st.error(f"Error loading models: {e}")
         st.stop()
+        
     return simplernn, lstm, gru
 
 simplernn, lstm, gru = load_models_and_assets()
