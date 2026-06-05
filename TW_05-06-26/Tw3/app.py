@@ -1,11 +1,10 @@
+```python
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-# ======================================================
-# PAGE CONFIG
-# ======================================================
+import os
+import pickle
 
 st.set_page_config(
     page_title="Medical Report Understanding System",
@@ -14,26 +13,57 @@ st.set_page_config(
 
 st.title("🏥 Intelligent Medical Report Understanding System")
 
-from tensorflow.keras.models import load_model
-import pickle
+# ======================================================
+# CHECK FILES
+# ======================================================
 
-model = load_model(
-    "medical_specialty_model.keras"
-)
+st.sidebar.subheader("Project Files")
 
-with open(
+required_files = [
+    "medical_specialty_model.keras",
     "tokenizer.pkl",
-    "rb"
-) as f:
+    "label_encoder.pkl"
+]
 
-    tokenizer = pickle.load(f)
+for file in required_files:
+    st.sidebar.write(
+        f"{file}: {'✅ Found' if os.path.exists(file) else '❌ Missing'}"
+    )
 
-with open(
-    "label_encoder.pkl",
-    "rb"
-) as f:
+# ======================================================
+# LOAD MODEL
+# ======================================================
 
-    encoder = pickle.load(f)
+try:
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+    model = load_model(
+        "medical_specialty_model.keras"
+    )
+
+    with open(
+        "tokenizer.pkl",
+        "rb"
+    ) as f:
+        tokenizer = pickle.load(f)
+
+    with open(
+        "label_encoder.pkl",
+        "rb"
+    ) as f:
+        encoder = pickle.load(f)
+
+    st.success("Model Loaded Successfully")
+
+except Exception as e:
+
+    st.error(
+        f"Error Loading Model: {e}"
+    )
+
+    st.stop()
+
 # ======================================================
 # POSITIONAL ENCODING
 # ======================================================
@@ -59,12 +89,8 @@ def positional_encoding(max_position, d_model):
     return pe
 
 # ======================================================
-# DEMO PREDICTION FUNCTION
-# Replace with trained model prediction
+# PREDICTION FUNCTION
 # ======================================================
-
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-import numpy as np
 
 MAX_LEN = 200
 
@@ -77,7 +103,8 @@ def predict_specialty(text):
     padded = pad_sequences(
         sequence,
         maxlen=MAX_LEN,
-        padding="post"
+        padding="post",
+        truncating="post"
     )
 
     prediction = model.predict(
@@ -86,18 +113,20 @@ def predict_specialty(text):
     )
 
     class_index = np.argmax(
-        prediction
-    )
+        prediction,
+        axis=1
+    )[0]
 
     specialty = encoder.inverse_transform(
         [class_index]
     )[0]
 
-    confidence = np.max(
-        prediction
+    confidence = float(
+        np.max(prediction)
     )
 
     return specialty, confidence
+
 # ======================================================
 # IMPORTANT TERMS
 # ======================================================
@@ -126,9 +155,13 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
-    report_text = uploaded_file.read().decode("utf-8")
+    report_text = uploaded_file.read().decode(
+        "utf-8"
+    )
 
-    st.subheader("Uploaded Medical Report")
+    st.subheader(
+        "Uploaded Medical Report"
+    )
 
     st.text_area(
         "Report Content",
@@ -136,15 +169,13 @@ if uploaded_file is not None:
         height=250
     )
 
-    # ==================================================
-    # PREDICTION
-    # ==================================================
-
     specialty, confidence = predict_specialty(
         report_text
     )
 
-    st.subheader("Prediction")
+    st.subheader(
+        "Prediction"
+    )
 
     st.success(
         f"Predicted Specialty: {specialty}"
@@ -152,33 +183,24 @@ if uploaded_file is not None:
 
     st.metric(
         "Confidence Score",
-        f"{confidence*100:.2f}%"
+        f"{confidence * 100:.2f}%"
     )
-
-    # ==================================================
-    # IMPORTANT TERMS
-    # ==================================================
 
     st.subheader(
         "Important Medical Terms"
     )
 
-    detected_terms = []
-
     report_lower = report_text.lower()
 
-    for term in important_terms:
-
-        if term in report_lower:
-
-            detected_terms.append(term)
+    detected_terms = [
+        term
+        for term in important_terms
+        if term in report_lower
+    ]
 
     if detected_terms:
-
         st.write(detected_terms)
-
     else:
-
         st.write(
             "No important medical terms detected."
         )
@@ -187,7 +209,9 @@ if uploaded_file is not None:
     # ATTENTION MAP
     # ==================================================
 
-    st.subheader("Attention Map")
+    st.subheader(
+        "Attention Heatmap"
+    )
 
     attention_scores = np.random.rand(
         10,
@@ -195,7 +219,7 @@ if uploaded_file is not None:
     )
 
     fig, ax = plt.subplots(
-        figsize=(6,4)
+        figsize=(6, 4)
     )
 
     sns.heatmap(
@@ -211,7 +235,7 @@ if uploaded_file is not None:
     st.pyplot(fig)
 
     # ==================================================
-    # POSITIONAL ENCODING HEATMAP
+    # POSITIONAL ENCODING
     # ==================================================
 
     st.subheader(
@@ -224,7 +248,7 @@ if uploaded_file is not None:
     )
 
     fig2, ax2 = plt.subplots(
-        figsize=(10,5)
+        figsize=(10, 5)
     )
 
     sns.heatmap(
@@ -239,12 +263,9 @@ if uploaded_file is not None:
 
     st.pyplot(fig2)
 
-# ======================================================
-# FOOTER
-# ======================================================
-
 st.markdown("---")
 
 st.write(
     "Healthcare NLP Project | Medical Report Understanding System"
 )
+```
