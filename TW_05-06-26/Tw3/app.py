@@ -14,6 +14,26 @@ st.set_page_config(
 
 st.title("🏥 Intelligent Medical Report Understanding System")
 
+from tensorflow.keras.models import load_model
+import pickle
+
+model = load_model(
+    "medical_specialty_model.keras"
+)
+
+with open(
+    "tokenizer.pkl",
+    "rb"
+) as f:
+
+    tokenizer = pickle.load(f)
+
+with open(
+    "label_encoder.pkl",
+    "rb"
+) as f:
+
+    encoder = pickle.load(f)
 # ======================================================
 # POSITIONAL ENCODING
 # ======================================================
@@ -43,33 +63,41 @@ def positional_encoding(max_position, d_model):
 # Replace with trained model prediction
 # ======================================================
 
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import numpy as np
+
+MAX_LEN = 200
+
 def predict_specialty(text):
 
-    text = text.lower()
+    sequence = tokenizer.texts_to_sequences(
+        [text]
+    )
 
-    if any(word in text for word in
-           ["stroke", "brain", "seizure", "neurologic"]):
-        return "Neurology", 0.95
+    padded = pad_sequences(
+        sequence,
+        maxlen=MAX_LEN,
+        padding="post"
+    )
 
-    elif any(word in text for word in
-             ["fracture", "bone", "spine"]):
-        return "Orthopedics", 0.93
+    prediction = model.predict(
+        padded,
+        verbose=0
+    )
 
-    elif any(word in text for word in
-             ["heart", "cardiac", "artery", "chest pain"]):
-        return "Cardiology", 0.94
+    class_index = np.argmax(
+        prediction
+    )
 
-    elif any(word in text for word in
-             ["skin", "rash", "dermatology"]):
-        return "Dermatology", 0.92
+    specialty = encoder.inverse_transform(
+        [class_index]
+    )[0]
 
-    elif any(word in text for word in
-             ["xray", "ct", "mri", "scan"]):
-        return "Radiology", 0.91
+    confidence = np.max(
+        prediction
+    )
 
-    else:
-        return "Unknown", 0.70
-
+    return specialty, confidence
 # ======================================================
 # IMPORTANT TERMS
 # ======================================================
